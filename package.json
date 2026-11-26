@@ -1,0 +1,14 @@
+{
+  "name": "carotte-wc-price-calculator",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.cjs",
+    "check": "node --check assets/admin.js",
+    "test:php": "php tests/run.php",
+    "build": "bash scripts/build-zip.sh"
+  },
+  "devDependencies": {
+    "jsdom": "26.1.0"
+  }
+}

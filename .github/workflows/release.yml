@@ -1,0 +1,64 @@
+name: Build release ZIP
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - "v*"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    uses: ./.github/workflows/validate.yml
+
+  build:
+    needs: validate
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Check tag version
+        if: startsWith(github.ref, 'refs/tags/')
+        shell: bash
+        run: |
+          set -euo pipefail
+          version="${GITHUB_REF_NAME#v}"
+          header="$(sed -n 's/^ \* Version: //p' carotte-wc-price-calculator.php)"
+          [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ && "$version" == "$header" ]] || {
+            printf 'Tag and plugin version differ\n' >&2
+            exit 1
+          }
+
+      - name: Build ZIP
+        run: bash scripts/build-zip.sh
+
+      - name: Upload installable plugin ZIP
+        uses: actions/upload-artifact@v4
+        with:
+          name: carotte-wc-price-calculator-${{ github.sha }}
+          path: dist/*.zip
+          if-no-files-found: error
+          retention-days: 30
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.zip
+          body: |
+            Première version de Carotte WC Price Calculator.
+
+            Calcul automatique du prix normal des produits simples à partir du prix au kg et du conditionnement Carotte, avec conversion kg/g et vérification à l'enregistrement. Les produits variables sont exclus.
+
+            Installation : télécharger carotte-wc-price-calculator-0.1.0.zip dans les assets ci-dessous, puis utiliser Extensions > Ajouter une extension > Téléverser une extension dans WordPress.
+
+            Prérequis : WordPress 6.5+, PHP 8.1+, WooCommerce et les champs du thème Carotte.
